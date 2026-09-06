@@ -22,7 +22,7 @@ void ShowMenu(int axis)
     cout << "Select: ";
 }
 
-void ShowStatus(bool enabled[], bool alarm[], int axis)
+void ShowStatus(const bool enabled[], const bool alarm[], int axis)
 {
     if (enabled[axis - 1])
     {
@@ -43,7 +43,7 @@ void ShowStatus(bool enabled[], bool alarm[], int axis)
     }
 }
 
-void ShowMotionStatus(bool busy[], int axis)
+void ShowMotionStatus(const bool busy[], int axis)
 {
     if (busy[axis - 1])
     {
@@ -78,7 +78,8 @@ void MoveMotor(int axis, const string &direction, int speed, int steps, bool &bu
     cout << "Move Complete" << endl;
 }
 
-void ShowAllPositions(int position[], bool busy[], bool enabled[], bool alarm[])
+void ShowAllPositions(const int position[], const bool busy[],
+                      const bool enabled[], const bool alarm[])
 {
     cout << "\n=== All Axis Status ===" << endl;
 
