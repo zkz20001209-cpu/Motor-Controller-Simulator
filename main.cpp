@@ -2,6 +2,107 @@
 #include <string>
 using namespace std;
 
+struct AxisStatus
+{
+    int id;
+    int position;
+    bool busy;
+    bool Enable;
+    bool Alarm;
+    bool homed;
+};
+
+AxisStatus& CurrentAxis(AxisStatus axes[], int axis)
+{
+	return axes[axis - 1];
+}
+
+void TriggerAlarm(AxisStatus& motor)
+{
+	motor.Alarm = true;
+	motor.Enable = false;
+	motor.homed = false;
+	
+	cout << "Alarm Triggered" << endl;
+    cout << "Motor Disabled" << endl;
+    cout << "Motor Not Homed" << endl;
+}
+
+void ResetAlarm(AxisStatus& motor)
+{
+	motor.Alarm = false;
+	motor.homed = false;
+	cout << "Alarm Reset" << endl;
+	cout << "Motor Not Homed" << endl;
+}
+
+void EnableMotor(AxisStatus& motor)
+{
+    if (motor.Alarm == true)
+    {
+        cout << "Motor Alarm" << endl;
+        return;
+    }
+
+    motor.Enable = true;
+    cout << "Motor Enabled" << endl;
+}
+
+void DisableMotor(AxisStatus& motor)
+{
+	motor.Enable = false;
+	cout << "Motor Disabled" << endl;
+}
+
+bool CanMove(AxisStatus& motor, string dir, int speed, int steps)
+{
+    int targetPosition = 0;
+
+    if (dir != "forward" and dir != "reverse")
+    {
+        cout << "Direction Error" << endl;
+        return false;
+    }
+    else if (speed <= 0)
+    {
+        cout << "Speed Error" << endl;
+        return false;
+    }
+    else if (steps <= 0)
+    {
+        cout << "Steps Error" << endl;
+        return false;
+    }
+    else if (motor.Alarm == true)
+    {
+        cout << "Motor Alarm" << endl;
+        return false;
+    }
+    else if (motor.Enable == false)
+    {
+        cout << "Motor Disable" << endl;
+        return false;
+    }
+    else if (motor.homed == false)
+    {
+        cout << "Motor Not Homed" << endl;
+        return false;
+    }
+    if (dir == "forward")
+    {
+        targetPosition = motor.position + steps;
+    }
+    else if (dir == "reverse")
+        targetPosition = motor.position - steps;
+
+    if (targetPosition < -1000 or targetPosition>1000)
+    {
+        cout << "Limit Error" << endl;
+        return false;
+    }
+    return true;
+}
+
 void ShowMenu(int axis)
 {
     cout << "Curent Axis: "<<axis<<endl;
@@ -15,17 +116,9 @@ void ShowMenu(int axis)
     cout<<  "8. Home"<<endl;
     cout << "0. Exit" << endl;
 }
-void ShowStatus(bool Enable[], bool Alarm[], int axis)
+void ShowStatus(AxisStatus &motor)
 {
-    if (Enable[axis - 1]== true)
-    {
-        cout << "Motor Status:Enabled" << endl;
-    }
-    else
-    {
-        cout << "Motor Status:Disabled" << endl;
-    }
-    if (Alarm[axis - 1] == true)
+    if (motor.Alarm == true)
     {
         cout << "Alarm Status:Active" << endl;
     }
@@ -33,11 +126,19 @@ void ShowStatus(bool Enable[], bool Alarm[], int axis)
     {
         cout << "Alarm Status:Normal" << endl;
     }
+    if (motor.Enable == true)
+    {
+        cout << "Motor Status:Enabled" << endl;
+    }
+    else
+    {
+        cout << "Motor Status:Disabled" << endl;
+    }
 }
 
-void ShowMotionStatus(bool busy[], int axis)
+void ShowMotionStatus(AxisStatus &motor)
 {
-    if (busy[axis - 1] == true)
+    if (motor.busy == true)
     {
         cout << "Motion Status:Moving" << endl;
     }
@@ -47,37 +148,37 @@ void ShowMotionStatus(bool busy[], int axis)
     }
 }
 
-void UpdatePosition(int &position, string dir, int steps)
+void UpdatePosition(AxisStatus &motor, string dir, int steps)
 {
     if (dir == "forward")
     {
-        position = position + steps;
+        motor.position = motor.position + steps;
     }
     else if (dir == "reverse")
     {
-        position = position - steps;
+        motor.position = motor.position - steps;
     }
-    cout << "Current Position:" << position << endl;
+    cout << "Current Position:" << motor.position << endl;
 }
 
-void MoveMotor(int axis, string dir, int speed, int steps, bool &busy)
+void MoveMotor(AxisStatus &motor, string dir, int speed, int steps)
 {
-    busy = true;
+    motor.busy = true;
     cout << "Motion Status:Moving" << endl;
-    cout << "Axis " << axis << " move " << dir << " ,speed " << speed << ",steps " << steps << endl;
-    busy = false;
+    cout << "Axis " << motor.id << " move " << dir << " ,speed " << speed << ",steps " << steps << endl;
+    motor.busy = false;
     cout << "Move Complete" << endl;
 }
 
-void ShowAllPosition(int position[], bool busy[], bool Enable[], bool Alarm[] , bool homed[])
+void ShowAllPosition(AxisStatus axes[])
 {
     for (int i = 0; i < 8; i++)
     {
-        cout << "Axis " << i + 1 << " Position: " << position[i] << endl;
-        cout<<"Axis "<<i+1<<" busy: "<<busy[i]<<endl;  
-        cout<<"Axis "<<i+1<<" Enable: "<<Enable[i]<<endl;  
-        cout<<"Axis "<<i+1<<" Alarm "<<Alarm[i]<<endl; 
-        cout<<"Axis"<<i+1<<"homed "<<homed[i]<<endl;
+        cout<<"Axis "<<axes[i].id<< " Position: "<<axes[i].position << endl;
+        cout<<"Axis "<< axes[i].id << " Busy: " << axes[i].busy << endl;
+        cout<<"Axis "<< axes[i].id << " Enabled: " << axes[i].Enable << endl;
+        cout<<"Axis "<< axes[i].id << " Alarm: " << axes[i].Alarm << endl;
+        cout<<"Axis "<< axes[i].id << " Homed: " << axes[i].homed << endl;
     }
 }
 
@@ -96,52 +197,49 @@ void SelectAxis(int &axis)
     }
 }
 
-void HomeMotor(int axis, bool Enable[], bool Alarm[], int position[], bool homed[])
+void HomeMotor(AxisStatus &motor)
 {
-             if (Alarm[axis-1] == true)
+             if (motor.Alarm == true)
              {
              cout<<"Motor Alarm"<<endl;
              }
-             else if (Enable[axis-1] == false)
+             else if (motor.Enable == false)
              {
              cout<<"Motor Disable"<<endl;
              }
              else 
              {
-             position[axis-1] = 0;
-             homed[axis-1] = true;
+             motor.position = 0;
+             motor.homed = true;
              cout<<"Home Complete"<<endl;
-             cout<<"Current Position: "<<position[axis-1] <<endl;
+             cout<<"Current Position: "<<motor.position <<endl;
               } 
 }
               
 int main()
 {
+    AxisStatus axes[8];
     bool running = true;
-    bool busy[8];
-    bool Enable[8];
-    bool Alarm[8];
-    bool homed[8];
     string dir;
-    int axis=1;
+    int axis = 1;
     int menu;
     int speed;
     int steps;
-    int position[8] = {0};
-    int targetPosition;
-    
-    for(int i=0; i<8;i++)
+
+    for (int i = 0; i < 8;i++)
     {
-        Enable[i] = true;
-        busy[i] =false;
-        Alarm[i]=false;
-        homed[i]=false;
+        axes[i].id = i + 1;
+        axes[i].position = 0;
+        axes[i].Enable = true;
+        axes[i].busy = false;
+        axes[i].Alarm = false;
+        axes[i].homed = false;
     }
 
     while (running == true)
     {
-        ShowStatus(Enable, Alarm, axis);
-        ShowMotionStatus(busy, axis);
+        ShowStatus(CurrentAxis(axes, axis));
+        ShowMotionStatus(CurrentAxis(axes, axis));
         ShowMenu(axis);
 
         cin >> menu;
@@ -151,94 +249,44 @@ int main()
             running = false;
             break;
         case 1:
-            Enable[axis - 1] = true;
-            cout << "Motor Enable" << endl;
+			EnableMotor(CurrentAxis(axes, axis));
             break;
         case 2:
-            Enable[axis - 1] = false;
-            cout << "Motor Disabled" << endl;
+            DisableMotor(CurrentAxis(axes, axis));
             break;
         case 3:
-            cin  >> dir >> speed >> steps;
-            if (axis < 1 or axis > 8)
+        {
+            AxisStatus& motor = CurrentAxis(axes, axis);
+            cin >> dir >> speed >> steps;
+
+            if (CanMove(motor, dir, speed, steps) == false)
             {
-                cout << "Axis Error" << endl;
                 continue;
             }
-            else if (dir != "forward" and dir != "reverse")
-            {
-                cout << "Direction Error" << endl;
-                continue;
-            }
-            else if (speed <= 0)
-            {
-                cout << "Speed Error" << endl;
-                continue;
-            }
-            else if (steps <= 0)
-            {
-                cout << "Steps Error" << endl;
-                continue;
-            }
-            else if (Alarm[axis - 1] == true)
-            {
-                cout << "Motor Alarm" << endl;
-                continue;
-            }
-            else if (Enable[axis - 1] == false)
-            {
-                cout << "Motor Disable" << endl;
-                continue;
-            } 
-            else if (homed[axis - 1] == false)
-            {
-               cout << "Motor Not Homed" << endl;
-               continue;
-            }
-             if(dir == "forward")
-            {
-               targetPosition=position[axis-1]+steps;
-            }
-            else if(dir=="reverse" )
-            {
-               targetPosition=position[axis-1]-steps;
-            } 
-            if (targetPosition<-1000 or targetPosition>1000)
-            {
-               cout<<"Limit Error"<<endl;
-               continue;
-            }                                                              
-            else
-            {
-                MoveMotor(axis, dir, speed, steps, busy[axis-1]);
-                UpdatePosition(position[axis - 1], dir, steps);
-                cout << "Axis Position: " << position[axis - 1] << endl;
-            }
-            break;
+
+                MoveMotor(motor, dir, speed, steps);
+                UpdatePosition(motor, dir, steps);
+                cout << "Axis Position: " << motor.position << endl;
+        }
+        break;
         case 4:
-            Alarm[axis - 1] = true;
-            homed[axis - 1] = false;
-            cout << "Alarm Triggered" << endl;
-            cout << "Motor Not Homed" << endl;
+			TriggerAlarm(CurrentAxis(axes, axis));
             break;
         case 5:
-            Alarm[axis - 1] = false;
-            homed[axis - 1] = false;
-            cout << "Alarm Reset" << endl;
-            cout << "Motor Not Homed" << endl;
+            ResetAlarm(CurrentAxis(axes, axis));
             break;
         case 6:
-            ShowAllPosition(position, busy, Enable, Alarm, homed);
+            ShowAllPosition(axes);
             break;
-         case 7:
-             SelectAxis(axis);
-             break;   
-         case 8:
-             HomeMotor(axis, Enable, Alarm, position, homed);
-              break;
+        case 7:
+            SelectAxis(axis);
+            break;
+        case 8:
+            HomeMotor(CurrentAxis(axes, axis));
+            break;
         default:
             cout << "Menu Error" << endl;
             break;
-          }
+        }
     }
 }
