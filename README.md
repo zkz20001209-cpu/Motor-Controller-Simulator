@@ -15,7 +15,8 @@ A lightweight C++17 command-line simulator for 8-axis motor control, homing, ala
 - 由 `CanMove()` 统一检查运动参数、当前状态和软件限位。
 - 触发报警时自动禁用轴并清除回零标记；报警期间禁止重新使能。
 - 复位报警后需重新使能、回零，才能执行移动。
-- 状态显示函数只读取和输出状态。
+- 状态显示和移动校验函数通过 `const` 引用读取状态。
+- 位置更新在 `MoveMotor()` 内完成，再清除 busy 并输出完成提示，菜单不再重复更新位置。
 
 程序启动时选中 1 号轴；所有轴默认使能、无报警、空闲、位置为 0，但均未回零。**位置为 0 不代表已经回零，移动前必须先执行菜单 `8`。**
 
@@ -87,7 +88,7 @@ g++ -std=c++17 -Wall -Wextra -pedantic main.cpp -o motor_controller_simulator.ex
 
 1. 安装“使用 C++ 的桌面开发”工作负载。
 2. 创建 C++ 控制台项目，用仓库中的 `main.cpp` 替换模板源文件，避免保留两个 `main()`。
-3. 在项目属性中将 C++ 语言标准设置为 C++17，生成项目后按 `Ctrl+F5` 运行。
+3. 在项目属性中将 C++ 语言标准设置为 C++17，符合模式设为“是”（`/permissive-`），并添加 `/utf-8` 选项。源码使用标准替代运算符 `and` / `or`；本次 MSVC 验证需要符合模式才能识别。生成项目后按 `Ctrl+F5` 运行。
 
 如果本地已经配置了 `Motor-Controller-Simulator.sln`，可直接打开该解决方案。当前仓库尚未包含本地生成的 `.sln` 和 `.vcxproj` 文件；仅克隆源码并以文件夹方式打开，不会自动创建传统 VS 控制台项目。
 
@@ -184,7 +185,7 @@ forward 100 1
 | `ShowMotionStatus` | 显示当前轴的运动状态 |
 | `SelectAxis` | 校验并切换当前轴 |
 | `HomeMotor` | 检查报警和使能状态，执行模拟回零 |
-| `MoveMotor` | 模拟运动开始与结束，更新 busy 状态 |
+| `MoveMotor` | 设置 busy、调用 UpdatePosition 更新位置，再清除 busy 并报告完成 |
 | `UpdatePosition` | 根据方向和步数更新位置 |
 | `ShowAllPosition` | 汇总 8 个轴的位置与全部状态 |
 | `main` | 初始化各轴状态、处理菜单及移动前校验 |
